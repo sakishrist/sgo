@@ -20,6 +20,14 @@ __SGO_PARSE_RULE () {
 			rule=${rule%%'}'}
 			rule=${rule##'{'}
 			mode=3
+		elif [[ ${rule:0:2} == '![' && ${rule: -1} == ']' ]]; then
+			rule=${rule%%']'}
+			rule=${rule##'['}
+			mode=4
+		elif [[ ${rule:0:2} == '!{' && ${rule: -1} == '}' ]]; then
+			rule=${rule%%'}'}
+			rule=${rule##'{'}
+			mode=5
 		else
 			echo "syntax error: Rule '$rule' is not enclosed in [...] or {...}"
 			return 1
@@ -94,10 +102,15 @@ sgo () {
 	__SGO_PARSE_RULE "$__SGO_RULE"
 
 	__SGO_SHIFT=0
+	__SGO_IGNORED=
+
 	for arg in "$@"; do
 		if [[ $isVal == 1 ]]; then
-
-			__SGO_HANDLE "$opt" "$arg"
+			if [[ ${MODES[$opt]} == 3 ]]; then
+				__SGO_HANDLE "$opt" "$arg"
+			elif [[ ${MODES[$opt]} == 5 ]]; then
+				__SGO_IGNORED+=" -$opt '$arg'"
+			fi
 			isVal=
 		elif [[ $arg =~ ^-- ]]; then  # LONG OPTS
 
@@ -118,6 +131,12 @@ sgo () {
 			if [[ ${MODES[$opt]} == 3 ]]; then # Mode: assign value to VAR
 				[[ $val == $arg ]] && { echo "Argument for $opt not provided but needed"; return 1; }
 				__SGO_HANDLE "${REAL_OPTS[$opt]}" "$val"
+			elif [[ ${MODES[$opt]} == 5 ]]; then # Mode: ignore opt with value
+				[[ $val == $arg ]] && { echo "Argument for $opt not provided but needed"; return 1; }
+				__SGO_IGNORED+=" --$opt='$val'"
+			elif [[ ${MODES[$opt]} == 4 ]]; then # Mode: ignore opt
+				[[ $val != $arg ]] && { echo "Argument for $opt provided but not needed"; return 1; }
+				__SGO_IGNORED+=" --$opt"
 			else # Mode: increment VAR or assign value to VAR
 				[[ $val != $arg ]] && { echo "Argument for $opt provided but not needed"; return 1; }
 				__SGO_HANDLE "${REAL_OPTS[$opt]}"
@@ -138,6 +157,15 @@ sgo () {
 						isVal=1
 					else # Mode: increment VAR or assign value to VAR
 						__SGO_HANDLE "$opt" "$rest"
+					fi
+					break
+				elif [[ ${MODES[$opt]} == 4 ]]; then # Mode: ignore opt
+					__SGO_IGNORED+=" -$opt"
+				elif [[ ${MODES[$opt]} == 5 ]]; then # Mode: ignore opt with value
+					if [[ -z $rest ]]; then
+						isVal=1
+					else
+						__SGO_IGNORED+=" -$opt'$rest'"
 					fi
 					break
 				else
