@@ -5,8 +5,14 @@ __SGO_PARSE_RULE () {
 	cleanRule () {
 		rule=${rule%%'}'}
 		rule=${rule##'{'}
+		
+		rule=${rule##'!{'}
+		
+		
 		rule=${rule%%']'}
 		rule=${rule##'['}
+		
+		rule=${rule##'!['}
 	}
 	
 	ruleEnclosedIn () {
@@ -165,7 +171,7 @@ sgo () {
 				opt=${arg: 0:1}
 
 				rest=${arg: 1}
-				[[ -z ${VARS[$opt]} ]] && { echo "Option $opt is not acceptable in '$*'" >&2; return 1; }
+				[[ -z ${MODES[$opt]} ]] && { echo "Option $opt is not acceptable in '$*'" >&2; return 1; }
 
 				if [[ ${MODES[$opt]} == 3 ]]; then # Mode: assign value to VAR
 					if [[ -z $rest ]]; then
@@ -189,17 +195,16 @@ sgo () {
 
 			done
 		else
-			# This is the end of the opts
-			__SGO_DEBUG_END
-			return 0
+			break;
 		fi
 		((__SGO_SHIFT++))
 	done
+	
 	if [[ $isVal == 1 ]]; then
 		echo "Argument for $opt not provided but needed" >&2
 		return 1
-	else
-		__SGO_DEBUG_END
-		return 0
 	fi
+	
+	__SGO_DEBUG_END
+	return 0
 }
