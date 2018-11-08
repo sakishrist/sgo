@@ -23,10 +23,15 @@ __SGO_PARSE_RULE () {
 	
 	# Some local variables
 	local mode rule elem aliasOpt mainOpt var expr
-	expr="$*"
-	expr="${expr/$'\n'/ }";
+	
+	while read line; do
+		expr+=" ${line%%\#*}"
+	done <<< "$*"
+	
 	local IFS=$' \t\n'
+	
 	for elem in $expr; do
+		
 		if [[ $elem == *'='* ]]; then
 			var=${elem%%=*}
 		fi
