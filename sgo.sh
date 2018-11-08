@@ -119,18 +119,21 @@ sgo () {
 	local -A VARS
 	local -A MODES
 	local -A REAL_OPTS
+	local -A MANDATORY_VARS
 
 	__SGO_PARSE_RULE "$__SGO_RULE"
 
 	__SGO_SHIFT=0
-	__SGO_IGNORED=
+	__SGO_IGNORED=()
 
 	for arg in "$@"; do
+		origArg="$arg"
+		
 		if [[ $isVal == 1 ]]; then
 			if [[ ${MODES[$opt]} == 3 ]]; then
 				__SGO_HANDLE "$opt" "$arg"
 			elif [[ ${MODES[$opt]} == 5 ]]; then
-				__SGO_IGNORED+=" -$opt '$arg'"
+				__SGO_IGNORED+=("$origArg")
 			fi
 			isVal=
 		elif [[ $arg =~ ^-- ]]; then  # LONG OPTS
@@ -147,24 +150,23 @@ sgo () {
 			fi
 
 
-			[[ -z ${VARS[$opt]} ]] && { echo "Option $opt is not acceptable in '$*'" >&2; return 1; }
+			[[ -z ${MODES[$opt]} ]] && { echo "Option $opt is not acceptable in '$*'" >&2; return 1; }
 
 			if [[ ${MODES[$opt]} == 3 ]]; then # Mode: assign value to VAR
 				[[ $val == "$arg" ]] && { echo "Argument for $opt not provided but needed" >&2; return 1; }
 				__SGO_HANDLE "${REAL_OPTS[$opt]}" "$val"
 			elif [[ ${MODES[$opt]} == 5 ]]; then # Mode: ignore opt with value
 				[[ $val == "$arg" ]] && { echo "Argument for $opt not provided but needed" >&2; return 1; }
-				__SGO_IGNORED+=" --$opt='$val'"
+				__SGO_IGNORED+=("$origArg")
 			elif [[ ${MODES[$opt]} == 4 ]]; then # Mode: ignore opt
 				[[ $val != "$arg" ]] && { echo "Argument for $opt provided but not needed" >&2; return 1; }
-				__SGO_IGNORED+=" --$opt"
+				__SGO_IGNORED+=("$origArg")
 			else # Mode: increment VAR or assign value to VAR
 				[[ $val != "$arg" ]] && { echo "Argument for $opt provided but not needed" >&2; return 1; }
 				__SGO_HANDLE "${REAL_OPTS[$opt]}"
 			fi
 
 		elif [[ $arg =~ ^- ]]; then  # SHORT OPTS
-
 			while [[ ${#arg} -gt 1 ]]; do
 
 				arg=${arg: 1}
@@ -181,13 +183,12 @@ sgo () {
 					fi
 					break
 				elif [[ ${MODES[$opt]} == 4 ]]; then # Mode: ignore opt
-					__SGO_IGNORED+=" -$opt"
+					__SGO_IGNORED+=("$origArg")
 				elif [[ ${MODES[$opt]} == 5 ]]; then # Mode: ignore opt with value
 					if [[ -z $rest ]]; then
 						isVal=1
-					else
-						__SGO_IGNORED+=" -$opt'$rest'"
 					fi
+					__SGO_IGNORED+=("$origArg")
 					break
 				else
 					__SGO_HANDLE "$opt"
