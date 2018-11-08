@@ -30,9 +30,15 @@ __SGO_PARSE_RULE () {
 		if [[ $elem == *'='* ]]; then
 			var=${elem%%=*}
 		fi
+		mandatoryVar=$( [[ ${var:0:1} == '!' ]]; echo $?; )
+		var=${var#'!'}
 		rule=${elem#*=}
 
 		if ruleEnclosedIn '[' ']'; then
+			if [[ $mandatoryVar == "0" ]]; then
+				echo "Var '$var' is set mandatory in flag mode. This is unsuported." >&2
+				return 1
+			fi
 			if [[ $rule = *'|'* ]]; then
 				mode=2
 			else
@@ -64,6 +70,10 @@ __SGO_PARSE_RULE () {
 			MODES["$mainOpt"]="$mode"
 			REAL_OPTS["$mainOpt"]="$mainOpt"
 
+			if [[ $mandatoryVar == 0 ]]; then # 0 means yes
+				MANDATORY_VARS["$var"]=1 # 1 means not processed
+			fi
+
 			if [[ -n $aliasOpt ]]; then
 				VARS["$aliasOpt"]="$var"
 				MODES["$aliasOpt"]="$mode"
@@ -91,6 +101,7 @@ __SGO_HANDLE () {
 		fi
 		var="${VARS[$opt]}"
 		eval "$var=\"$value\""
+		MANDATORY_VARS["$var"]=0 # means processed
 	fi
 	#eval "echo ${VARS[$opt]}=\"\$${VARS[$opt]}\""
 }
@@ -205,6 +216,13 @@ sgo () {
 		echo "Argument for $opt not provided but needed" >&2
 		return 1
 	fi
+	
+	for i in "${MANDATORY_VARS[@]}"; do
+		if [[ $i != 0 ]]; then
+			echo "Some mandatory options are missing" >&2
+			return 1
+		fi
+	done
 	
 	__SGO_DEBUG_END
 	return 0

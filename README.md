@@ -8,7 +8,8 @@ sgoInit 'STAGE=[1|2|3|f<full>]
 QUIET=[q<quiet>]
 COMP={c<components>}
 WIZ=[w<wizard>]
-VARIANT={v<variant>}
+!VARIANT={v<variant>}
+LANGUAGE={l<language>}
 MONOC=[m<monochrome>]
 HELP=[h<help>]'
 ```
@@ -39,7 +40,9 @@ Curly brackets (`VAR={x}`) permit an argument to be provided for the option. In 
 
 As with square brackets, long names can be provided (`VAR={x<xephos>}`).
 
-Long options can have their arguments wither separated from the option by a whitespace or by an equals sign (`--xephos=gold` or `--xephos rusty`), while the short options can be separated by a whitespace or left right after the option (`-x gold` or `-xrusty`).
+Long options can have their arguments either separated from the option by a white-space or by an equals sign (`--xephos=gold` or `--xephos rusty`), while the short options can be separated by a white-space or left right after the option (`-x gold` or `-xrusty`).
+
+An exclamation mark (!) in the beginning of the variable, denotes that this is a mandatory option. This is only acceptable for options with arguments (defined with curly brackets).
 
 Multiple options with arguments cannot be currently specified in the same definition (e.g. `VARIANT={v<variant>|d<distribution>}` is not allowed) but they can be defined on different lines:
 ```
