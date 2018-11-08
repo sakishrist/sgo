@@ -8,7 +8,14 @@ __SGO_PARSE_RULE () {
 		rule=${rule%%']'}
 		rule=${rule##'['}
 	}
-
+	
+	ruleEnclosedIn () {
+		[[ ${rule:0:${#1}} != "$1" ]] && return 1
+		[[ ${rule: -${#2}} != "$2" ]] && return 1
+		return 0
+	}
+	
+	# Some local variables
 	local mode rule elem aliasOpt mainOpt var expr
 	expr="$*"
 	expr="${expr/$'\n'/ }";
@@ -17,17 +24,17 @@ __SGO_PARSE_RULE () {
 		var=${elem%%=*}
 		rule=${elem#*=}
 
-		if [[ ${rule:0:1} == '[' && ${rule: -1} == ']' ]]; then
+		if ruleEnclosedIn '[' ']'; then
 			if [[ $rule = *'|'* ]]; then
 				mode=2
 			else
 				mode=1
 			fi
-		elif [[ ${rule:0:1} == '{' && ${rule: -1} == '}' ]]; then
+		elif ruleEnclosedIn '{' '}'; then
 			mode=3
-		elif [[ ${rule:0:2} == '![' && ${rule: -1} == ']' ]]; then
+		elif ruleEnclosedIn '![' ']'; then
 			mode=4
-		elif [[ ${rule:0:2} == '!{' && ${rule: -1} == '}' ]]; then
+		elif ruleEnclosedIn '!{' '}'; then
 			mode=5
 		else
 			echo "syntax error: Rule '$rule' is not enclosed in [...] or {...}"
@@ -56,7 +63,7 @@ __SGO_PARSE_RULE () {
 			fi
 		done
 	done
-	unset cleanRule
+	unset isMandDie cleanRule
 }
 
 __SGO_HANDLE () {
