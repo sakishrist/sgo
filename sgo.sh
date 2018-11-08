@@ -1,7 +1,7 @@
 #!/bin/bash
 
 __SGO_PARSE_RULE () {
-	local mode rule elem al main var expr
+	local mode rule elem aliasOpt mainOpt var expr
 	expr="$*"
 	expr="${expr/$'\n'/ }";
 	local IFS=$' \t\n'
@@ -35,22 +35,22 @@ __SGO_PARSE_RULE () {
 		fi
 
 		for opt in ${rule//|/ }; do
-			main=${opt%%<*}
-			al=${opt#*<}; al=${al%>}
+			mainOpt=${opt%%<*}
+			aliasOpt=${opt#*<}; aliasOpt=${aliasOpt%>}
 
-			if [[ -z $main ]]; then
+			if [[ -z $mainOpt ]]; then
 				echo "syntax error: empty opt"
 				return 1
 			fi
 
-			VARS["$main"]="$var"
-			MODES["$main"]="$mode"
-			REAL_OPTS["$main"]="$main"
+			VARS["$mainOpt"]="$var"
+			MODES["$mainOpt"]="$mode"
+			REAL_OPTS["$mainOpt"]="$mainOpt"
 
-			if [[ -n $al ]]; then
-				VARS["$al"]="$var"
-				MODES["$al"]="$mode"
-				REAL_OPTS["$al"]="$main"
+			if [[ -n $aliasOpt ]]; then
+				VARS["$aliasOpt"]="$var"
+				MODES["$aliasOpt"]="$mode"
+				REAL_OPTS["$aliasOpt"]="$mainOpt"
 			fi
 		done
 	done
