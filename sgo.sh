@@ -21,7 +21,9 @@ __SGO_PARSE_RULE () {
 	expr="${expr/$'\n'/ }";
 	local IFS=$' \t\n'
 	for elem in $expr; do
-		var=${elem%%=*}
+		if [[ $elem == *'='* ]]; then
+			var=${elem%%=*}
+		fi
 		rule=${elem#*=}
 
 		if ruleEnclosedIn '[' ']'; then
@@ -37,7 +39,7 @@ __SGO_PARSE_RULE () {
 		elif ruleEnclosedIn '!{' '}'; then
 			mode=5
 		else
-			echo "syntax error: Rule '$rule' is not enclosed in [...] or {...}"
+			echo "syntax error: Rule '$rule' is not enclosed in [...] or {...}" >&2
 			return 1
 		fi
 
@@ -48,7 +50,7 @@ __SGO_PARSE_RULE () {
 			aliasOpt=${opt#*<}; aliasOpt=${aliasOpt%>}
 
 			if [[ -z $mainOpt ]]; then
-				echo "syntax error: empty opt"
+				echo "syntax error: empty opt" >&2
 				return 1
 			fi
 
@@ -68,7 +70,8 @@ __SGO_PARSE_RULE () {
 
 __SGO_HANDLE () {
 	local opt="$1"
-	local var="$2"
+	local value="$2"
+	local var
 
 	if [[ ${MODES[$opt]} == 1 ]]; then # Mode: increment VAR
 		eval "((${VARS[$opt]}++))"
@@ -76,11 +79,12 @@ __SGO_HANDLE () {
 		eval "${VARS[$opt]}=$opt"
 	elif [[ ${MODES[$opt]} == 3 ]]; then # Mode: assign value to VAR
 		if [[ ${BASH_VERSINFO[0]} -lt 4 || ( ${BASH_VERSINFO[0]} -eq 4 && ${BASH_VERSINFO[1]} -lt 3 ) ]]; then
-			var="${var//\"/\"}"
+			value="${value//\"/\"}"
 		else
-			var="${var//\"/\\\"}"
+			value="${value//\"/\\\"}"
 		fi
-		eval "${VARS[$opt]}=\"$var\""
+		var="${VARS[$opt]}"
+		eval "$var=\"$value\""
 	fi
 	#eval "echo ${VARS[$opt]}=\"\$${VARS[$opt]}\""
 }
@@ -137,19 +141,19 @@ sgo () {
 			fi
 
 
-			[[ -z ${VARS[$opt]} ]] && { echo "Option $opt is not acceptable in '$*'"; return 1; }
+			[[ -z ${VARS[$opt]} ]] && { echo "Option $opt is not acceptable in '$*'" >&2; return 1; }
 
 			if [[ ${MODES[$opt]} == 3 ]]; then # Mode: assign value to VAR
-				[[ $val == "$arg" ]] && { echo "Argument for $opt not provided but needed"; return 1; }
+				[[ $val == "$arg" ]] && { echo "Argument for $opt not provided but needed" >&2; return 1; }
 				__SGO_HANDLE "${REAL_OPTS[$opt]}" "$val"
 			elif [[ ${MODES[$opt]} == 5 ]]; then # Mode: ignore opt with value
-				[[ $val == "$arg" ]] && { echo "Argument for $opt not provided but needed"; return 1; }
+				[[ $val == "$arg" ]] && { echo "Argument for $opt not provided but needed" >&2; return 1; }
 				__SGO_IGNORED+=" --$opt='$val'"
 			elif [[ ${MODES[$opt]} == 4 ]]; then # Mode: ignore opt
-				[[ $val != "$arg" ]] && { echo "Argument for $opt provided but not needed"; return 1; }
+				[[ $val != "$arg" ]] && { echo "Argument for $opt provided but not needed" >&2; return 1; }
 				__SGO_IGNORED+=" --$opt"
 			else # Mode: increment VAR or assign value to VAR
-				[[ $val != "$arg" ]] && { echo "Argument for $opt provided but not needed"; return 1; }
+				[[ $val != "$arg" ]] && { echo "Argument for $opt provided but not needed" >&2; return 1; }
 				__SGO_HANDLE "${REAL_OPTS[$opt]}"
 			fi
 
@@ -161,7 +165,7 @@ sgo () {
 				opt=${arg: 0:1}
 
 				rest=${arg: 1}
-				[[ -z ${VARS[$opt]} ]] && { echo "Option $opt is not acceptable in '$*'"; return 1; }
+				[[ -z ${VARS[$opt]} ]] && { echo "Option $opt is not acceptable in '$*'" >&2; return 1; }
 
 				if [[ ${MODES[$opt]} == 3 ]]; then # Mode: assign value to VAR
 					if [[ -z $rest ]]; then
@@ -192,7 +196,7 @@ sgo () {
 		((__SGO_SHIFT++))
 	done
 	if [[ $isVal == 1 ]]; then
-		echo "Argument for $opt not provided but needed"
+		echo "Argument for $opt not provided but needed" >&2
 		return 1
 	else
 		__SGO_DEBUG_END
