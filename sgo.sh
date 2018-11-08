@@ -1,5 +1,10 @@
 #!/bin/bash
 
+__SGO_CLEAN_RULE () {
+	rule=${rule%%$2}
+	rule=${rule##$1}
+}
+
 __SGO_PARSE_RULE () {
 	local mode rule elem aliasOpt mainOpt var expr
 	expr="$*"
@@ -15,19 +20,15 @@ __SGO_PARSE_RULE () {
 			else
 				mode=1
 			fi
-			rule=${rule%%']'}
-			rule=${rule##'['}
+			__SGO_CLEAN_RULE $rule '[' ']'
 		elif [[ ${rule:0:1} == '{' && ${rule: -1} == '}' ]]; then
-			rule=${rule%%'}'}
-			rule=${rule##'{'}
+			__SGO_CLEAN_RULE $rule '{' '}'
 			mode=3
 		elif [[ ${rule:0:2} == '![' && ${rule: -1} == ']' ]]; then
-			rule=${rule%%']'}
-			rule=${rule##'['}
+			__SGO_CLEAN_RULE $rule '[' ']'
 			mode=4
 		elif [[ ${rule:0:2} == '!{' && ${rule: -1} == '}' ]]; then
-			rule=${rule%%'}'}
-			rule=${rule##'{'}
+			__SGO_CLEAN_RULE $rule '{' '}'
 			mode=5
 		else
 			echo "syntax error: Rule '$rule' is not enclosed in [...] or {...}"
